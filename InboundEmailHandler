@@ -1,0 +1,94 @@
+/*
+* @author: Siddharth Sinha
+* @created:12-Feb-2024
+* @userstoryURL: N/A
+* @description: Relate emails received on Email Services address to Objects in Salesforce and save attachments as files
+* @dependency: The email body must have salesforce record id in the format SFID_a0E79000000LWBeEAO_thread
+* @design: The first email sent from salesforce should use an email template or custom logic to insert SFID_Id_thread in the body of the email
+* @changelog:
+* v1: Published Online
+*/
+    // Declare a public class that can be used in this application and does not get restricted by running user's access.
+    public without sharing class InboundEmailHandler implements Messaging.InboundEmailHandler {
+ 
+    // InboundEmailResult object is used to return the result of the email service. 
+    public Messaging.InboundEmailResult handleInboundEmail(Messaging.inboundEmail email, Messaging.InboundEnvelope env){
+
+    // Create an InboundEmailResult object for returning the result of the Apex Email Service
+    Messaging.InboundEmailResult result = new Messaging.InboundEmailResult();
+    
+    // Declare Variables
+    String emailBodyText = '';
+
+try {   
+    // Validate that the body of the incoming email is not blank and then try to find the matching pattern 
+        if(string.isNotBlank(email.plainTextBody)) {
+        emailBodyText = email.plainTextBody;         
+        }
+        else if(string.isNotBlank(email.htmlBody)){
+        emailBodyText = email.htmlBody;
+        }   
+    //Scan the body of incoming email, to find 'SFID_a0E79000000LWBeEAO_thread' and extract the Id
+    Pattern p = Pattern.compile('(?<=SFID_)(.*)(?=_thread)');
+    Matcher m = p.matcher(emailBodyText);
+    if(m.find()){
+    String stingHTMLBodyId = String.ValueOf(m.group(1));
+    Id recordId = Id.valueOf(stingHTMLBodyId);
+    //System.debug('recordId= ' + recordId);
+
+    // if EnhancedEmail Perm is enabled, create an EmailMessage object
+    EmailMessage em = new EmailMessage();
+    em.Incoming = true;
+    em.status = '2'; //(for incoming email status 2 and outgoing email status 1)
+    em.relatedToId = recordId;
+    em.fromAddress = email.fromAddress;
+    em.fromName = email.fromName;
+    em.subject = email.subject;
+    em.htmlBody = email.htmlBody;
+    em.ThreadIdentifier = email.references[0];
+    em.TextBody = email.plainTextBody;
+    insert em;
+
+    // For any attachments that the email contains, attach them to the "Files" related list on the record
+    // Create Content Document which is the file iteself
+    if (email.binaryAttachments != null && email.binaryAttachments.size() > 0) {
+    List<ContentVersion>cvList = new List<ContentVersion>();
+    List<ContentDocumentLink> cdlList = new List<ContentDocumentLink>();
+        for(Messaging.InboundEmail.BinaryAttachment binAttach : email.binaryAttachments) {
+            ContentVersion testContentInsert = new ContentVersion();
+            testContentInsert.Title = binAttach.fileName;
+            testContentInsert.VersionData = binAttach.body;
+            testContentInsert.PathOnClient = '/' + binAttach.fileName ;
+            cvList.add(testContentInsert);
+            }
+        insert cvList;        
+    // Create Content Document Link for the above File, to link it with the record    
+    cvList = [select id, ContentDocumentId from ContentVersion WHERE Id in :cvList];
+        for(ContentVersion cv : cvList) {
+            ContentDocumentLink cl = new ContentDocumentLink();
+            cl.ContentDocumentId = cv.ContentDocumentId;
+            cl.LinkedEntityId = recordId; //Shared with record ID
+            cl.ShareType = 'V';
+            cl.Visibility = 'AllUsers';
+            cdlList.add(cl);
+            }
+        insert cdlList;
+        }
+      } //end of if
+    }
+    //end try block  
+    // If an exception occurs, a QueryException is called.
+   catch (QueryException e) {
+       System.debug('Query Issue: ' + e);
+   }     
+   finally {
+        emailBodyText ='';
+   }
+
+   // Set the result to true. No need to send an email back to the user with an error message
+   result.success = true;
+
+   // Return the result for the Apex Email Service
+   return result;
+  }
+}
