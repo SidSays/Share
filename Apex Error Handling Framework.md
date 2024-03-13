@@ -10,18 +10,7 @@ Let us see how to put custom exception logging in salesforce application. Below 
 1. Create Custom Object :
 Let us create new custom object in our salesforce application. Custom object name and fields details are as below image.
 
-Object Name : CustomException
-Fields detail:
-
-Field Name	Field API Name	Type
-ClassName	ClassName__c	Text(255)
-Exception Message	Exception_Message__c	Long Text Area(32768)
-Exception Type	Exception_Type__c	Text(255)
-Govt Limit in Executing Code	Govt_Limit_in_Executing_Code__c	Long Text Area(32768)
-Line Number	Line_Number__c	Number(18, 0)
-MethodName	MethodName__c	Text(255)
-Related To Number	Related_To_Number__c	Text(255)
-StackTrace	StackTrace__c	Long Text Area(32768)
+<img width="805" alt="image" src="https://github.com/SidSays/Share/assets/25760138/7a45c69a-65c4-49d1-8154-64bc697e2a57">
 
 ![image](https://github.com/SidSays/Share/assets/25760138/3c13067c-ec29-4e46-95a9-d43a9b647974)
 
