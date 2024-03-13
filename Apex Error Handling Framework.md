@@ -1,11 +1,10 @@
 <html>
-<p>While working on salesforce implementation, we should log exception somewhere in our system. This will help in identifying issue as well as we required it for enhancing our current system.
-We can use salesforce debug log but this we have check each log record one by one to see some specific apex class issue.</p>
+<p>While working on salesforce implementations, we should log apex exceptions. This helps in identifying unknown code issues and reduces tech debt.</p>
 
-Let us see how to put custom exception logging in salesforce application. Below are steps to create custom logging :-
-1. Create Custom Object
-2. Create Apex class for Exception logging
-3. Use that exception class in your code.
+Let's see how to use apex exception logging in salesforce. There are three steps to follow:
+1. Create a Custom Object to store logs
+2. Create an Apex class that would enable Exception logging and creating records in the custom object
+3. Include the exception class in every helper class where apex code gets authored
 
 ## 1. Create Custom Object:
 Let us create new custom object in our salesforce application. Custom object name and fields details are as below image.
