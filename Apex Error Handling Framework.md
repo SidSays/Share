@@ -1,5 +1,5 @@
 <html>
-<p>While working on salesforce implementations, we should log apex exceptions. This helps in identifying unknown code issues and reduces tech debt.Let's see how to use apex exception logging in salesforce. There are three steps to follow:</p>
+<p>While working on salesforce implementations, we should log apex exceptions. This helps in identifying unknown code issues and reduces tech debt. Let's see how to use apex exception logging in salesforce. There are three steps to follow:</p>
 
 1. Create a Custom Object to store logs
 2. Create an Apex class that would enable Exception logging and creating records in the custom object
