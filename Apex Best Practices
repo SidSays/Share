@@ -1,0 +1,21 @@
+Below are all possible code optimization that can be done while querying it or doing DML operations in apex code.
+
+DML or SOQL Inside Loops
+Limiting data rows for lists
+Disabling Debug Mode for production
+Stop Describing every time and use Caching of the described object
+Avoid .size() and use .isEmpty()
+Use Filter in SOQL
+Limit depth relationship code
+Avoid Heap Size
+Optimize Trigger
+Bulkify Code
+Foreign Key Relationship in SOQL
+Defer Sharing Rules
+Use collections like Map
+Querying Large Data Sets
+Use Asynchronous methods
+Avoid Hardcode in code
+Use Platform Caching
+Use property initializer for test class
+Unwanted Code Execution
