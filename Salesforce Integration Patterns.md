@@ -3,6 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Salesforce Integration Patterns</title>
 </head>
 <body>
     <h1>Salesforce Integration Patterns: Sync, Async, Fire and Forget, Remote Call In, Batch Data Synchronization, UI Update on Data Changes, Data Virtualization</h1>
