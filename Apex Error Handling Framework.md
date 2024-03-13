@@ -7,7 +7,7 @@ Let us see how to put custom exception logging in salesforce application. Below 
 2. Create Apex class for Exception logging
 3. Use that exception class in your code.
 
-#1. Create Custom Object:
+# 1. Create Custom Object:
 Let us create new custom object in our salesforce application. Custom object name and fields details are as below image.
 
 <img width="805" alt="image" src="https://github.com/SidSays/Share/assets/25760138/7a45c69a-65c4-49d1-8154-64bc697e2a57">
@@ -15,7 +15,7 @@ Let us create new custom object in our salesforce application. Custom object nam
 ![image](https://github.com/SidSays/Share/assets/25760138/3c13067c-ec29-4e46-95a9-d43a9b647974)
 
 
-#2. Create an Apex class for Exception:
+# 2. Create an Apex class for Exception:
 We have to create apex class which will extend Exception class. We will implement our code logic in this class.
 Overloaded method LogException with different parameter is created. First method will log any anonymous exception and second method will log exception with record id for which exception is logged.
 ```
@@ -59,8 +59,9 @@ public class HandleCustomException extends Exception {
 }
 ```
 
-<h3> 3. Use the exception class in your code: </h3>
+# 3. Use the exception class in your code: </h3>
 Now our apex class is ready to use in our code to handle custom exceptions. For testing, let us create a test class for the above apex class.
+
 ```
 @isTest
 public class HandleCustomExceptionTest {
@@ -76,7 +77,7 @@ public class HandleCustomExceptionTest {
 }
 ```
 
-##Summary :
-if we want to store our application exception, we have to log that in custom object. We can create report/dashboard on that object to see on admin dashboard, so that exception will be tracked.
+## Summary :
+<p>All apex errors can be logged in this custom object, we can create list views/reports/dashboard to monitor this on an admin dashboard.
 
 </html>
