@@ -4,25 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Apex Code Best Practices</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            line-height: 1.6;
-            margin: 0 auto;
-            padding: 20px;
-            max-width: 800px;
-        }
-        h1 {
-            color: #333;
-        }
-        h2 {
-            color: #666;
-        }
-        ul {
-            list-style-type: square;
-            margin-left: 20px;
-        }
-    </style>
 </head>
 <body>
     <h1>Apex Code Best Practices</h1>
