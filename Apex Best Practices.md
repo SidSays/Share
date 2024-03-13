@@ -3,7 +3,6 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Apex Code Best Practices</title>
 </head>
 <body>
     <h1>Apex Code Best Practices</h1>
