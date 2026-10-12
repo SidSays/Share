@@ -1,0 +1,21 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomField xmlns="http://soap.sforce.com/2006/04/metadata">
+    <fullName>Team__c</fullName>
+    <description>Drives automated access provisioning. Each value API name must equal the Label (MasterLabel) of a Team_Provisioning__mdt record.</description>
+    <externalId>false</externalId>
+    <inlineHelpText>Setting this value applies the team's Profile, Role, feature licenses, permission sets and permission set groups. Clearing it removes the team-driven access.</inlineHelpText>
+    <label>Team</label>
+    <required>false</required>
+    <type>Picklist</type>
+    <valueSet>
+        <restricted>true</restricted>
+        <valueSetDefinition>
+            <sorted>false</sorted>
+            <value>
+                <fullName>Sample_Team</fullName>
+                <default>false</default>
+                <label>Sample Team</label>
+            </value>
+        </valueSetDefinition>
+    </valueSet>
+</CustomField>
