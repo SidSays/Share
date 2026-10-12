@@ -68,7 +68,7 @@ public inherited sharing class TeamProvisioningResyncBatch implements Database.B
 
         // Phase 2: assignments (all setup objects, so no mixed DML here)
         Map<Id, List<String>> issues = TeamProvisioningService.syncAssignments(teamByUserId);
-        TeamProvisioningService.recordResults(issues, fieldErrors);
+        TeamProvisioningService.logIssues(issues, fieldErrors);
     }
 
     public void finish(Database.BatchableContext context) {

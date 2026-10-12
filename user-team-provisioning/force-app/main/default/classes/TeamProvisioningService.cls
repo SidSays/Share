@@ -17,12 +17,12 @@
  */
 public inherited sharing class TeamProvisioningService {
 
-    public static final String STATUS_PENDING = 'Pending';
-    public static final String STATUS_SUCCESS = 'Success';
-    public static final String STATUS_ERROR = 'Error';
-
     @TestVisible
     private static Map<String, Team_Provisioning__mdt> configCache;
+
+    /** Messages passed to logError() in this transaction. Lets tests assert on failures. */
+    @TestVisible
+    private static List<String> loggedErrors = new List<String>();
 
     // ---------------------------------------------------------------------------------
     // Config
@@ -65,7 +65,7 @@ public inherited sharing class TeamProvisioningService {
     /**
      * Applies Profile, Role and feature license checkboxes to in-memory users.
      * Returns validation errors keyed by the user's index in the list. The caller decides
-     * how to surface them (addError in a trigger, status fields in the resync batch).
+     * how to surface them (addError in a trigger, logError() in the resync batch).
      *
      * Blank Team: Profile and Role stay as they are; feature license checkboxes are cleared.
      */
@@ -111,9 +111,6 @@ public inherited sharing class TeamProvisioningService {
                 u.UserPermissionsMarketingUser = false;
                 u.UserPermissionsKnowledgeUser = false;
                 u.UserPermissionsSupportUser = false;
-                u.Provisioning_Status__c = STATUS_PENDING;
-                u.Provisioning_Message__c = 'Team cleared. Feature licenses removed; permission set and '
-                    + 'permission set group removal queued. If this stays Pending, review the Apex Jobs page.';
                 continue;
             }
 
@@ -152,9 +149,6 @@ public inherited sharing class TeamProvisioningService {
             u.UserPermissionsMarketingUser = rec.Marketing_User__c;
             u.UserPermissionsKnowledgeUser = rec.Knowledge_User__c;
             u.UserPermissionsSupportUser = rec.Service_Cloud_User__c;
-            u.Provisioning_Status__c = STATUS_PENDING;
-            u.Provisioning_Message__c = 'Profile, Role and feature licenses applied for team "' + u.Team__c
-                + '". Permission set sync queued. If this stays Pending, review the Apex Jobs page.';
         }
         return errors;
     }
@@ -171,16 +165,15 @@ public inherited sharing class TeamProvisioningService {
         if (Limits.getQueueableJobs() < Limits.getLimitQueueableJobs()) {
             System.enqueueJob(new TeamProvisioningQueueable(userIds));
         } else {
-            // Status stays Pending with a message pointing to the resync batch.
-            System.debug(LoggingLevel.WARN, 'TeamProvisioning: Queueable limit reached; run TeamProvisioningResyncBatch for '
-                + userIds.size() + ' user(s).');
+            logError('Queueable limit reached; permission set sync not queued for ' + userIds.size()
+                + ' user(s). Run TeamProvisioningResyncBatch. User Ids: ' + String.join(new List<Id>(userIds), ', '));
         }
     }
 
-    /** Syncs assignments and writes the result to the users' status fields. */
-    public static void syncAndRecord(Map<Id, String> teamByUserId) {
+    /** Syncs assignments and logs any failures. */
+    public static void syncAndLog(Map<Id, String> teamByUserId) {
         Map<Id, List<String>> issues = syncAssignments(teamByUserId);
-        recordResults(issues, new Map<Id, String>());
+        logIssues(issues, new Map<Id, String>());
     }
 
     /**
@@ -338,39 +331,35 @@ public inherited sharing class TeamProvisioningService {
     }
 
     /**
-     * Writes Provisioning_Status__c and Provisioning_Message__c. The update does not change
-     * Team__c, so the trigger handler skips it and there is no recursion.
-     * fieldErrors holds Phase 1 errors from the resync batch (user Id to message).
+     * Logs every user that had a problem: assignment issues from syncAssignments() and
+     * Phase 1 field errors from the resync batch (user Id to message).
      */
-    public static void recordResults(Map<Id, List<String>> assignmentIssues, Map<Id, String> fieldErrors) {
-        Map<Id, User> updates = new Map<Id, User>();
+    public static void logIssues(Map<Id, List<String>> assignmentIssues, Map<Id, String> fieldErrors) {
         for (Id userId : assignmentIssues.keySet()) {
             List<String> issues = assignmentIssues.get(userId);
-            Boolean ok = issues.isEmpty();
-            updates.put(userId, new User(
-                Id = userId,
-                Provisioning_Status__c = ok ? STATUS_SUCCESS : STATUS_ERROR,
-                Provisioning_Message__c = truncate(ok
-                    ? 'Provisioning completed ' + System.now().format() + '.'
-                    : String.join(issues, '\n'))
-            ));
-        }
-        for (Id userId : fieldErrors.keySet()) {
-            updates.put(userId, new User(
-                Id = userId,
-                Provisioning_Status__c = STATUS_ERROR,
-                Provisioning_Message__c = truncate(fieldErrors.get(userId))
-            ));
-        }
-        if (!updates.isEmpty()) {
-            Database.SaveResult[] results = Database.update(updates.values(), false);
-            for (Database.SaveResult r : results) {
-                if (!r.isSuccess()) {
-                    System.debug(LoggingLevel.ERROR, 'TeamProvisioning: could not write status for ' + r.getId() + ': '
-                        + joinErrors(r.getErrors()));
-                }
+            if (!issues.isEmpty()) {
+                logError('User ' + userId + ': ' + String.join(issues, ' | '));
             }
         }
+        for (Id userId : fieldErrors.keySet()) {
+            logError('User ' + userId + ': ' + fieldErrors.get(userId));
+        }
+    }
+
+    /**
+     * Single logging hook. Replace the System.debug line with a call to the org's existing
+     * logging framework, following that framework's conventions. Keep the loggedErrors line
+     * so the unit tests can assert on failures.
+     *
+     * Mixed DML: this runs in the same transaction as PermissionSetAssignment DML (a setup
+     * object). The logger must NOT insert a custom log record directly here. Use a framework
+     * call that publishes a Platform Event (Publish Immediately) or logs asynchronously.
+     */
+    public static void logError(String message) {
+        String fullMessage = 'TeamProvisioning: ' + message;
+        loggedErrors.add(fullMessage);
+        // TODO: replace with the org's logging framework call.
+        System.debug(LoggingLevel.ERROR, fullMessage);
     }
 
     // ---------------------------------------------------------------------------------
@@ -395,9 +384,5 @@ public inherited sharing class TeamProvisioningService {
             parts.add(e.getMessage());
         }
         return String.join(parts, '; ');
-    }
-
-    private static String truncate(String value) {
-        return value != null && value.length() > 32000 ? value.substring(0, 32000) : value;
     }
 }

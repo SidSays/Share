@@ -94,7 +94,6 @@ private class TeamProvisioningTest {
         System.assertEquals(standardProfile().Id, u.ProfileId);
         System.assertEquals(role.Id, u.UserRoleId);
         System.assertEquals(true, u.UserPermissionsMarketingUser);
-        System.assertEquals(TeamProvisioningService.STATUS_PENDING, u.Provisioning_Status__c);
     }
 
     @IsTest
@@ -170,14 +169,13 @@ private class TeamProvisioningTest {
         useConfig(config('Team_A', true, standardProfile().UserLicense.Name, null, 'TP_New_Test', null, false));
 
         Test.startTest();
-        TeamProvisioningService.syncAndRecord(new Map<Id, String>{ u.Id => 'Team_A' });
+        TeamProvisioningService.syncAndLog(new Map<Id, String>{ u.Id => 'Team_A' });
         Test.stopTest();
 
         Set<Id> assigned = assignedPermSetIds(u.Id);
         System.assert(assigned.contains(newPs.Id), 'New permission set should be assigned');
         System.assert(!assigned.contains(oldPs.Id), 'Old permission set should be removed');
-        User after = [SELECT Provisioning_Status__c FROM User WHERE Id = :u.Id];
-        System.assertEquals(TeamProvisioningService.STATUS_SUCCESS, after.Provisioning_Status__c);
+        System.assert(TeamProvisioningService.loggedErrors.isEmpty(), String.valueOf(TeamProvisioningService.loggedErrors));
     }
 
     @IsTest
@@ -189,7 +187,7 @@ private class TeamProvisioningTest {
         useConfig(config('Team_A', true, standardProfile().UserLicense.Name, null, null, null, false));
 
         Test.startTest();
-        TeamProvisioningService.syncAndRecord(new Map<Id, String>{ u.Id => null });
+        TeamProvisioningService.syncAndLog(new Map<Id, String>{ u.Id => null });
         Test.stopTest();
 
         System.assert(!assignedPermSetIds(u.Id).contains(ps.Id));
@@ -202,13 +200,12 @@ private class TeamProvisioningTest {
         useConfig(config('Team_A', true, standardProfile().UserLicense.Name, null, 'Does_Not_Exist', 'No_Group', false));
 
         Test.startTest();
-        TeamProvisioningService.syncAndRecord(new Map<Id, String>{ u.Id => 'Team_A' });
+        TeamProvisioningService.syncAndLog(new Map<Id, String>{ u.Id => 'Team_A' });
         Test.stopTest();
 
-        User after = [SELECT Provisioning_Status__c, Provisioning_Message__c FROM User WHERE Id = :u.Id];
-        System.assertEquals(TeamProvisioningService.STATUS_ERROR, after.Provisioning_Status__c);
-        System.assert(after.Provisioning_Message__c.contains('Does_Not_Exist'));
-        System.assert(after.Provisioning_Message__c.contains('No_Group'));
+        String logged = String.join(TeamProvisioningService.loggedErrors, '\n');
+        System.assert(logged.contains('Does_Not_Exist'), logged);
+        System.assert(logged.contains('No_Group'), logged);
     }
 
     @IsTest
@@ -220,7 +217,7 @@ private class TeamProvisioningTest {
         TeamProvisioningService.configCache = new Map<String, Team_Provisioning__mdt>();
 
         Test.startTest();
-        TeamProvisioningService.syncAndRecord(new Map<Id, String>{ u.Id => 'Unknown_Team' });
+        TeamProvisioningService.syncAndLog(new Map<Id, String>{ u.Id => 'Unknown_Team' });
         Test.stopTest();
 
         System.assert(assignedPermSetIds(u.Id).contains(ps.Id));
@@ -257,8 +254,6 @@ private class TeamProvisioningTest {
         Test.stopTest();
 
         // Feature licenses stay false here so the test does not depend on available Marketing User seats.
-        User after = [SELECT Provisioning_Status__c FROM User WHERE Id = :u.Id];
-        System.assertEquals(TeamProvisioningService.STATUS_SUCCESS, after.Provisioning_Status__c);
         System.assert(assignedPermSetIds(u.Id).contains(ps.Id));
     }
 

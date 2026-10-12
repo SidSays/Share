@@ -17,6 +17,6 @@ public inherited sharing class TeamProvisioningQueueable implements Queueable {
         for (User u : [SELECT Id, Team__c FROM User WHERE Id IN :userIds]) {
             teamByUserId.put(u.Id, u.Team__c);
         }
-        TeamProvisioningService.syncAndRecord(teamByUserId);
+        TeamProvisioningService.syncAndLog(teamByUserId);
     }
 }
