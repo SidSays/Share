@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<CustomMetadata xmlns="http://soap.sforce.com/2006/04/metadata" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+    <label>Sample_Team</label>
+    <protected>false</protected>
+    <values>
+        <field>Active__c</field>
+        <value xsi:type="xsd:boolean">true</value>
+    </values>
+    <values>
+        <field>Profile_Name__c</field>
+        <value xsi:type="xsd:string">Standard User</value>
+    </values>
+    <values>
+        <field>Role_Developer_Name__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>User_License__c</field>
+        <value xsi:type="xsd:string">Salesforce</value>
+    </values>
+    <values>
+        <field>Permission_Sets__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Permission_Set_Groups__c</field>
+        <value xsi:nil="true"/>
+    </values>
+    <values>
+        <field>Marketing_User__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>Knowledge_User__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+    <values>
+        <field>Service_Cloud_User__c</field>
+        <value xsi:type="xsd:boolean">false</value>
+    </values>
+</CustomMetadata>
