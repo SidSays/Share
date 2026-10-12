@@ -7,7 +7,7 @@ A small, metadata-driven framework that provisions user access from a single fie
 | Step | When | What happens |
 |---|---|---|
 | 1 | Before insert / before update, only when `Team__c` is set or changed | Looks up the `Team_Provisioning__mdt` record whose **Label equals the Team picklist API value**. Sets Profile, Role, Marketing User, Knowledge User and Service Cloud User on the record. Validates the Profile's license against the configured User License. Any problem blocks the save with a clear error on the Team field. |
-| 2 | After save, in a Queueable | Makes the user's permission set and permission set group assignments **match the team exactly**: anything not in the team config is removed, anything missing is added. Writes the result to `Provisioning_Status__c` and `Provisioning_Message__c`. |
+| 2 | After save, in a Queueable | Makes the user's permission set and permission set group assignments **match the team exactly**: anything not in the team config is removed, anything missing is added. Any failure is sent to a single logging hook, `TeamProvisioningService.logError()`, for your org's logging framework. |
 | 3 | On demand | `TeamProvisioningResyncBatch` re-applies config to existing team members after a metadata record changes. |
 
 ### Rules
@@ -27,9 +27,7 @@ user-team-provisioning/
 ├── sfdx-project.json
 └── force-app/main/default/
     ├── objects/User/fields/
-    │   ├── Team__c                      Restricted picklist (sample value: Sample_Team)
-    │   ├── Provisioning_Status__c       Pending / Success / Error
-    │   └── Provisioning_Message__c      Long text, result details
+    │   └── Team__c                      Restricted picklist (sample value: Sample_Team)
     ├── objects/Team_Provisioning__mdt/
     │   └── fields/
     │       ├── Active__c                Checkbox (default true)
@@ -75,13 +73,19 @@ trigger UserTrigger on User (before insert, before update, after insert, after u
 }
 ```
 
+## Hooking into your logging framework
+
+Failures from the async permission set sync (and from the resync batch) go to one method, `TeamProvisioningService.logError(String message)`. It writes to the debug log until you replace the marked line with your org's logging framework call. Errors on Profile, Role or License are not logged: they block the User save and show on the Team field.
+
+**Mixed DML warning.** `logError()` runs in the same transaction as the PermissionSetAssignment DML, which is a setup object. Your logger must not insert a custom log record directly at that point, or the transaction fails with a mixed DML error. Use a logger call that publishes a Platform Event (Publish Immediately behavior) or logs asynchronously.
+
 ## Setup
 
 1. Deploy the source: `sf project deploy start --source-dir force-app --target-org <alias>`
-2. Hook the handler into your trigger framework (above).
+2. Hook the handler into your trigger framework, and `logError()` into your logging framework (above).
 3. Replace the sample picklist value with your teams. For each value, the **API name** must equal the **Label** of a `Team_Provisioning__mdt` record. Keep both within 40 characters (the Label limit).
 4. Create one `Team_Provisioning__mdt` record per team.
-5. Field-level security: give edit access on `Team__c` only to the admins who manage users. Make `Provisioning_Status__c` and `Provisioning_Message__c` read-only.
+5. Field-level security: give edit access on `Team__c` only to the admins who manage users.
 6. Run all tests. `TeamProvisioningConfigTest` fails if any active Team value has no record, or a record points at a Profile, Role, permission set or group that does not exist.
 7. After editing a team record, run the resync:
 
@@ -96,16 +100,15 @@ Or call the **Resync Team Provisioning** Apex action from a Flow.
 
 - **Config is read with SOQL, not `getAll()` / `getInstance()`.** The static methods return only the first 255 characters of each field, which would silently cut off long permission set lists. The query runs once per transaction and is cached.
 - **Two phases to avoid mixed DML.** Profile, Role and feature licenses are plain field values set in the before trigger with no DML. Assignments run in a Queueable so a User save that happens alongside DML on non-setup objects (Flows, data loads, tests) does not fail.
-- **Status lives on the User.** Writing a custom log record in the same job as assignment DML would cause a mixed DML error, so results are stored in two User fields.
-- **Partial success.** One failed assignment does not block the others. Each failure is listed in `Provisioning_Message__c`.
-- **No recursion.** The status update does not change `Team__c`, so the handler skips it.
+- **Partial success.** One failed assignment does not block the others. Each failure is passed to `logError()` with the user Id.
+- **No recursion.** The resync batch updates users without changing `Team__c`, so the handler skips those updates.
 - **Managed package items in config.** List them as `ns__Name`. They are assigned when configured but never removed by the overwrite.
 
 ## Known limits
 
-- **Permission Set Licenses are not managed.** Permission sets that need a PSL fail to assign until the PSL is assigned manually. The failure shows as `Error` with the reason.
+- **Permission Set Licenses are not managed.** Permission sets that need a PSL fail to assign until the PSL is assigned manually. The failure is passed to `logError()` with the reason.
 - **Feature licenses are counted.** Marketing, Knowledge and Service Cloud User fail if no seats are left. The save shows Salesforce's error.
 - **Profile changes across licenses** are limited by Salesforce. Moving between Salesforce and Salesforce Platform is generally allowed. Other moves can be blocked by the platform.
 - **Unmanaged standard permission sets** that Salesforce assigns automatically are treated like any other unmanaged assignment. If a team needs one, list it in the team config, or the overwrite will remove it.
-- **Queueable limit.** If a transaction cannot enqueue another job (for example, inside an async context that has used its limit), the status stays `Pending`. Run the resync batch for those users.
+- **Queueable limit.** If a transaction cannot enqueue another job (for example, inside an async context that has used its limit), the sync is skipped and `logError()` records the affected user Ids. Run the resync batch for those users.
 - **Verification.** This source was reviewed but has not yet been compiled or run against an org. Deploy to a sandbox and run the tests first.
